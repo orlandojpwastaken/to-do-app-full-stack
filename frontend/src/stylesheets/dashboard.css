@@ -1,0 +1,174 @@
+/* =======================
+   App Container
+======================= */
+
+.logo {
+  height: 50px;
+  width: auto;
+}
+
+.app-container {
+  padding: 30px;
+  background-color: #318CE7;
+  font-family: 'Arial', sans-serif;
+  height: 100vh;
+}
+
+.header-spacing {
+  height: 20px;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  height: 40px;
+  margin-right: 10px;
+}
+
+.add-task-button {
+  background-color: #005082;
+  color: white;
+  border-radius: 5px;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.add-task-button:hover {
+  background-color: #003d5c;
+}
+
+/* =======================
+   Task List
+======================= */
+
+.task-container-wrapper {
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.task-list-container {
+  flex: 1;
+  background-color: #f7f7f7;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+/* =======================
+   Individual Task Cards
+======================= */
+
+.todo-card {
+  background-color: #e6e6e6;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.todo-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Task Title */
+.todo-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Task Description */
+.todo-desc {
+  font-size: 14px;
+  color: #555;
+}
+
+/* Task Deadline */
+.todo-deadline {
+  font-size: 12px;
+  color: #888;
+}
+
+/* Checkbox */
+.todo-checkmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.todo-checkmark input {
+  margin: 0;
+  width: 20px;
+  height: 20px;
+}
+
+/* Task Actions (Three Dots) */
+.todo-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #888;
+}
+
+.todo-actions:hover {
+  color: #005082;
+}
+
+/* Completed Task Styles */
+.todo-title.completed,
+.todo-desc.completed {
+  text-decoration: line-through;
+  color: #888;
+  opacity: 0.6;
+}
+
+/* =======================
+   Grid Layout
+======================= */
+
+/* Task Grid Layout */
+.task-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.task-dialog-date-time {
+  display: flex;
+  gap: 10px;
+}
+
+/* =======================
+   Media Queries
+======================= */
+
+
+@media (max-width: 1350px) {
+  .task-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: row; 
+    justify-content: space-between;
+  }
+
+}
