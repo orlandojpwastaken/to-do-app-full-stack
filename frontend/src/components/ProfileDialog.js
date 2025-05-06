@@ -1,46 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Grid } from '@mui/material';
-import { auth, db } from '../firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import axios from 'axios';
 
-const ProfileDialog = ({ open, handleClose }) => {
+const ProfileDialog = ({ open, handleClose, user }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (auth.currentUser) {
-        try {
-          const userRef = doc(db, 'users', auth.currentUser.uid);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            const userData = userSnap.data();
-            setFirstName(userData.firstName || '');
-            setLastName(userData.lastName || '');
-            setEmail(userData.email || '');
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-        }
-      }
-    };
-
-    if (open) {
-      fetchUserData();
+    if (open && user) {
+      // Get firstName and lastName directly from user object
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+      setEmail(user.email || '');
+      
+      console.log('User data in profile dialog:', user);
     }
-  }, [open]);
+  }, [open, user]);
 
   const handleSave = async () => {
-    if (auth.currentUser) {
-      try {
-        const userRef = doc(db, 'users', auth.currentUser.uid);
-        await updateDoc(userRef, { firstName, lastName });
-        setEditing(false);
-      } catch (error) {
-        console.error('Error updating user data:', error);
-      }
+    try {
+      // Send firstName and lastName separately as expected by backend
+      await axios.put('http://localhost:3000/api/users/profile', 
+        { firstName, lastName, email }, 
+        { withCredentials: true }
+      );
+      setEditing(false);
+    } catch (error) {
+      console.error('Error updating user data:', error);
     }
   };
 

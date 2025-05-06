@@ -1,31 +1,38 @@
 import React, { useState } from 'react';
 import { TextField, Button, Typography, Grid, Paper } from '@mui/material';
-import { signInWithEmailAndPassword } from 'firebase/auth'; 
-import { auth } from '../firebase';
-import { useNavigate } from 'react-router-dom';
+import { login } from '../services/authService';
 import '../stylesheets/auth.css';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
 
     if (!email || !password) {
       setError('Please fill in both fields');
+      setLoading(false);
       return;
     }
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      console.log('User logged in:', user);
-      navigate('/dashboard');
+      const userData = await login(email, password);
+      console.log('User logged in successfully:', userData);
+      // Force page reload to update auth state
+      window.location.href = '/dashboard';
     } catch (error) {
-      setError(error.message);
+      console.error('Login error:', error);
+      setError(
+        error.response?.data?.details || 
+        error.response?.data?.error || 
+        'Login failed. Please check your credentials and try again.'
+      );
+      setLoading(false);
     }
   };
 
@@ -45,6 +52,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="auth-textfield"
+                disabled={loading}
               />
             </Grid>
 
@@ -58,6 +66,7 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="auth-textfield"
+                disabled={loading}
               />
             </Grid>
 
@@ -73,8 +82,9 @@ const Login = () => {
                 fullWidth
                 variant="contained"
                 className="auth-button"
+                disabled={loading}
               >
-                Login
+                {loading ? 'Logging in...' : 'Login'}
               </Button>
             </Grid>
           </Grid>

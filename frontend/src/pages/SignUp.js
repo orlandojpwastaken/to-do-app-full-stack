@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { TextField, Button, Typography, Grid, Paper } from '@mui/material';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { setDoc, doc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { register } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import '../stylesheets/auth.css';
 
@@ -18,24 +16,22 @@ const SignUp = () => {
     e.preventDefault();
 
     if (!firstName || !email || !password) {
-      setError('Please fill in all fields');
+      setError('Please fill in all required fields');
       return;
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      await setDoc(doc(db, 'users', user.uid), {
-        firstName: firstName,
-        lastName: lastName || '',
-        email: email,
-      });
-      
-      console.log('User signed up:', user);
+      const name = lastName ? `${firstName} ${lastName}` : firstName;
+      const userData = await register(name, email, password);
+      console.log('User registered:', userData);
       navigate('/dashboard');
     } catch (error) {
-      setError(error.message);
+      console.error('Registration error:', error);
+      setError(
+        error.response?.data?.details || 
+        error.response?.data?.error || 
+        'Registration failed. Please try again.'
+      );
     }
   };
 
@@ -87,6 +83,7 @@ const SignUp = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                helperText="Password must be 8-20 characters with at least one uppercase letter, one lowercase letter, one number, and one special character"
                 className="auth-textfield"
               />
             </Grid>
