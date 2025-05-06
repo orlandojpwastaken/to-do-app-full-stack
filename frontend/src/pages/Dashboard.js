@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import Logo from '../assets/Logo.png';
 import { AppBar, Toolbar, Typography, Button, IconButton, Menu, MenuItem } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { auth, onAuthStateChanged , db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from '../firebase';
+import { todoService } from '../services/authService';
 
 import ProfileDialog from '../components/ProfileDialog';
 import ToDoList from '../components/ToDoList';
 import TaskDialog from '../components/TaskDialog';
 import '../stylesheets/dashboard.css';
 
-const Dashboard = ({ onLogout }) => {
+const Dashboard = ({ user, onLogout }) => {
   const [tasks, setTasks] = useState([]);
   const [anchorEl, setAnchorEl] = useState(null);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -28,33 +28,26 @@ const Dashboard = ({ onLogout }) => {
     handleMenuClose();
   };
 
-  // Fetches task documents from Firestore
+  // Fetches tasks from backend API
   const fetchTasks = async () => {
-    if (!auth.currentUser) return;
-    
-    const userTasksRef = collection(db, 'users', auth.currentUser.uid, 'to-do-tasks');
-    const querySnapshot = await getDocs(userTasksRef);
+    try {
+      const response = await todoService.getAllTodos();
+      
+      const tasksArray = response.map(task => ({
+        id: task.id,
+        ...task,
+        deadline: new Date(task.deadline),
+      }));
 
-    const tasksArray = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      deadline: doc.data().deadline?.toDate(),
-    }));
-
-    setTasks(tasksArray);
+      setTasks(tasksArray);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
   };
 
   // Initial fetching
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        fetchTasks(); 
-      } else {
-        console.log("No user logged in.");
-      }
-    });
-
-    return () => unsubscribe(); 
+    fetchTasks();
   }, []);
 
   // Task validation checking
@@ -80,7 +73,7 @@ const Dashboard = ({ onLogout }) => {
 
   // Opens the task dialog for editing existing tasks
   const handleEdit = (task) => {
-    const deadline = task.deadline instanceof Date ? task.deadline : new Date(task.deadline.seconds * 1000);
+    const deadline = task.deadline instanceof Date ? task.deadline : new Date(task.deadline);
     setDialogState({
       open: true,
       isEditing: true,
@@ -115,82 +108,88 @@ const Dashboard = ({ onLogout }) => {
 
   // Submit form data (add or edit task)
   const handleSubmit = async () => {
-    if (!auth.currentUser) return;
-    
-    const userTasksRef = collection(db, 'users', auth.currentUser.uid, 'to-do-tasks');
-  
     const { title, description, date, time } = dialogState.formData;
     const dateError = handleDateValidation(date, time);
-  
+
     if (dateError) {
       setDialogState(prevState => ({ ...prevState, dateError }));
       return;
     }
-  
+
     if (!title || !description) {
       setDialogState(prevState => ({ ...prevState, error: 'Please fill in the title and description.' }));
       return;
     }
-  
+
     const deadline = new Date(`${date}T${time}`);
-  
-    if (dialogState.isEditing) {
-      const existingTask = dialogState.taskToEdit;
-      const taskData = { 
-        title, 
-        description, 
-        deadline, 
-        completed: existingTask.completed
-      };
-  
-      await updateDoc(doc(userTasksRef, existingTask.id), taskData);
-    } else {
-      const taskData = { title, description, deadline, completed: false };
-      await addDoc(userTasksRef, taskData);
+
+    try {
+      if (dialogState.isEditing) {
+        const existingTask = dialogState.taskToEdit;
+        const taskData = { 
+          title, 
+          description, 
+          deadline, 
+          completed: existingTask.completed
+        };
+
+        await todoService.updateTodo(existingTask.id, taskData);
+      } else {
+        const taskData = { title, description, deadline, completed: false };
+        await todoService.addTodo(taskData);
+      }
+
+      fetchTasks();
+      setDialogState({
+        open: false,
+        isEditing: false,
+        taskToEdit: null,
+        formData: { title: '', description: '', date: '', time: '' },
+        error: '',
+        dateError: ''
+      });
+    } catch (error) {
+      console.error('Error submitting task:', error);
     }
-  
-    fetchTasks();
-    setDialogState({
-      open: false,
-      isEditing: false,
-      taskToEdit: null,
-      formData: { title: '', description: '', date: '', time: '' },
-      error: '',
-      dateError: ''
-    });
   };
 
   // Handles toggling task completion state
   const handleToggle = async (id) => {
-    if (!auth.currentUser) return;
-    const task = tasks.find(task => task.id === id);
-    const updatedTask = { ...task, completed: !task.completed };
-    await updateDoc(doc(db, 'users', auth.currentUser.uid, 'to-do-tasks', id), updatedTask);
-    fetchTasks();
+    try {
+      const task = tasks.find(task => task.id === id);
+      const updatedTask = { ...task, completed: !task.completed };
+      await todoService.updateTodo(id, updatedTask);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
   };
 
   // Handles deletion of tasks
   const handleDelete = async (id) => {
-    if (!auth.currentUser) return;
-    await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'to-do-tasks', id));
-    fetchTasks();
+    try {
+      await todoService.deleteTodo(id);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
   };  
 
   // Handle duplication of tasks
   const handleDuplicate = async (task) => {
-    if (!auth.currentUser) return;
+    try {
+      const newDeadline = new Date(task.deadline);
+      await todoService.addTodo({
+        title: task.title,
+        description: task.description,
+        deadline: newDeadline,
+        completed: task.completed,
+      });
     
-    const userTasksRef = collection(db, 'users', auth.currentUser.uid, 'to-do-tasks');
-  
-    const newDeadline = new Date(task.deadline);
-    await addDoc(userTasksRef, {
-      title: task.title,
-      description: task.description,
-      deadline: newDeadline,
-      completed: task.completed,
-    });
-  
-    fetchTasks();
+      fetchTasks();
+    } catch (error) {
+      console.error('Error duplicating task:', error);
+    }
   };
 
   const handleMenuOpen = (event) => {
@@ -274,7 +273,11 @@ const Dashboard = ({ onLogout }) => {
         </div>
       </div>
 
-      <ProfileDialog open={profileOpen} handleClose={() => setProfileOpen(false)} />
+      <ProfileDialog 
+        open={profileOpen} 
+        handleClose={() => setProfileOpen(false)} 
+        user={user}
+      />
     
       <TaskDialog
         open={dialogState.open}
